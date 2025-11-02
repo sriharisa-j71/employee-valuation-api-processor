@@ -15,6 +15,22 @@ max_keepalive_connections = 10
 keepalive_expiry = 30.0
 timeout = 10.0
 
+[response_parsing]
+# Field mapping for flexible API response parsing
+salary_field_mappings = ["base_salary", "salary", "basic_salary"]
+bonus_field_mappings = ["bonus", "incentive", "additional_pay"] 
+service_field_mappings = ["years_of_service", "service_years", "experience_years"]
+repayment_field_mappings = ["repayment_score", "credit_score", "payment_rating"]
+outstanding_field_mappings = ["outstanding_amount", "outstanding", "debt_amount"]
+awards_field_mappings = ["total_awards", "awards_count", "awards"]
+recognitions_field_mappings = ["recognitions", "recognition_count", "honors"]
+performance_field_mappings = ["performance_rating", "rating", "performance_score"]
+
+# Parsing optimization settings
+use_streaming_parser = false
+validate_responses = true
+cache_parsed_responses = true
+
 [database]
 path = "db.duckdb"
 

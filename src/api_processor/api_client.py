@@ -7,6 +7,7 @@ import httpx
 import orjson
 
 from .config import Config
+from .optimized_parser import LightweightResponseParser
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class APIClient:
     def __init__(self, config: Config):
         self.config = config
         self.client: httpx.AsyncClient | None = None
+        self.parser = LightweightResponseParser()  # Lightweight parser for medium-scale data
     
     def create_client(self) -> httpx.AsyncClient:
         """Create httpx AsyncClient with connection pool configuration"""
@@ -45,8 +47,8 @@ class APIClient:
         
         return client
     
-    async def call_with_retry(self, url: str, row_id: int) -> dict[str, Any]:
-        """Call API with exponential backoff retry logic"""
+    async def call_with_retry(self, url: str, row_id: int, response_type: str) -> dict[str, Any]:
+        """Call API with exponential backoff retry logic and optimized parsing"""
         if self.client is None:
             raise RuntimeError("API client not initialized. Use async context manager.")
         
@@ -56,7 +58,18 @@ class APIClient:
             try:
                 response = await self.client.get(url)
                 response.raise_for_status()
-                return orjson.loads(response.content)
+                
+                # Use optimized parser based on response type
+                if response_type == 'salary':
+                    return self.parser.parse_salary_response(response.content)
+                elif response_type == 'loans':
+                    return self.parser.parse_loans_response(response.content)
+                elif response_type == 'awards':
+                    return self.parser.parse_awards_response(response.content)
+                else:
+                    # Fallback to original parsing
+                    return orjson.loads(response.content)
+                    
             except httpx.TimeoutException:
                 logger.warning(f"Row {row_id}: Timeout (attempt {attempt + 1}/{max_retries})")
                 if attempt < max_retries - 1:

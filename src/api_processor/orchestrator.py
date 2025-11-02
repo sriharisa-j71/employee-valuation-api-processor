@@ -35,17 +35,17 @@ class Orchestrator:
             # Step 1: Call API1 - Salary Data
             url1 = base_url + api_config["endpoint_salary"].format(emp_id=emp_id)
             logger.info(f"Row {row_id} ({emp_id}): Calling Salary API...")
-            salary_data = await api_client.call_with_retry(url1, row_id)
+            salary_data = await api_client.call_with_retry(url1, row_id, "salary")
             
             # Step 2: Call API2 - Loans Data
             url2 = base_url + api_config["endpoint_loans"].format(emp_id=emp_id)
             logger.info(f"Row {row_id} ({emp_id}): Calling Loans API...")
-            loans_data = await api_client.call_with_retry(url2, row_id)
+            loans_data = await api_client.call_with_retry(url2, row_id, "loans")
             
             # Step 3: Call API3 - Awards Data
             url3 = base_url + api_config["endpoint_awards"].format(emp_id=emp_id)
             logger.info(f"Row {row_id} ({emp_id}): Calling Awards API...")
-            awards_data = await api_client.call_with_retry(url3, row_id)
+            awards_data = await api_client.call_with_retry(url3, row_id, "awards")
             
             # Step 4: Calculate valuation index
             valuation_index = self.valuator.calculate_index(salary_data, loans_data, awards_data)
