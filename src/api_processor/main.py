@@ -5,7 +5,7 @@ import sys
 
 import typer
 
-from .config import Config
+from .config import Config, ConfigError
 from .database import Database
 from .orchestrator import Orchestrator
 
@@ -17,8 +17,13 @@ logger = logging.getLogger(__name__)
 @app.command()
 def load(file: str = typer.Argument(..., help="Path to input pipe-separated file")):
     """Load employee data from file into DuckDB"""
-    config = Config()
-    db = Database(config.db_path)
+    try:
+        config = Config()
+    except ConfigError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+    
+    db = Database(config)
     
     try:
         total = db.load_data(file)
@@ -34,8 +39,13 @@ def process(
     reset_failed: bool = typer.Option(False, help="Reset failed records to pending")
 ):
     """Process employee records and validate grades"""
-    config = Config()
-    db = Database(config.db_path)
+    try:
+        config = Config()
+    except ConfigError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+    
+    db = Database(config)
     
     try:
         if reset_failed:
@@ -82,7 +92,7 @@ def status(
 ):
     """Show processing status summary"""
     config = Config()
-    db = Database(config.db_path)
+    db = Database(config)
     
     try:
         summary = db.get_status_summary(start, end)
@@ -113,7 +123,7 @@ def status(
 def report():
     """Generate validation report"""
     config = Config()
-    db = Database(config.db_path)
+    db = Database(config)
     
     try:
         # Validation summary
@@ -151,7 +161,7 @@ def reset(
 ):
     """Reset records to pending status"""
     config = Config()
-    db = Database(config.db_path)
+    db = Database(config)
     
     try:
         db.reset_range(start, end)

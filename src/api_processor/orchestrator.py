@@ -90,4 +90,17 @@ class Orchestrator:
                     return await self.process_row(row, api_client)
             
             tasks = [process_with_semaphore(row) for row in rows]
-            await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Process any exceptions that occurred
+            failed_count = 0
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    row_id = rows[i][0]
+                    emp_id = rows[i][1]
+                    logger.error(f"Row {row_id} ({emp_id}): Unhandled exception - {result}")
+                    failed_count += 1
+                elif result is False:
+                    failed_count += 1
+            
+            logger.info(f"Batch processing complete: {len(rows) - failed_count}/{len(rows)} successful")

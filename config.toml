@@ -22,3 +22,144 @@ path = "db.duckdb"
 grade_a_min = 80
 grade_b_min = 60
 grade_c_min = 40
+
+[sql_queries]
+# Table creation and data loading queries
+create_main_data_table = """
+CREATE OR REPLACE TABLE main_data AS 
+SELECT 
+    row_number() OVER () as row_id,
+    emp_id,
+    emp_name,
+    emp_type,
+    dept,
+    expected_grade
+FROM read_csv(?, delim='|', header=true, columns={
+    'emp_id': 'VARCHAR',
+    'emp_name': 'VARCHAR', 
+    'emp_type': 'VARCHAR',
+    'dept': 'VARCHAR',
+    'expected_grade': 'VARCHAR'
+})
+"""
+
+create_control_table = """
+CREATE TABLE IF NOT EXISTS process_control (
+    row_id INTEGER PRIMARY KEY,
+    status TEXT DEFAULT 'pending',
+    valuation_index FLOAT,
+    calculated_grade VARCHAR,
+    expected_grade VARCHAR,
+    validation_status VARCHAR,
+    last_error TEXT,
+    attempts INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+"""
+
+initialize_control_records = """
+INSERT INTO process_control (row_id, status, expected_grade)
+SELECT row_id, 'pending', expected_grade 
+FROM main_data
+ON CONFLICT (row_id) DO NOTHING
+"""
+
+# Query operations
+get_pending_rows = """
+SELECT 
+    main_data.row_id,
+    main_data.emp_id,
+    main_data.emp_name,
+    main_data.emp_type,
+    main_data.dept,
+    main_data.expected_grade
+FROM main_data
+INNER JOIN process_control ON main_data.row_id = process_control.row_id
+WHERE process_control.status = 'pending'
+ORDER BY main_data.row_id
+"""
+
+# Update operations
+update_success_with_results = """
+UPDATE process_control 
+SET 
+    status='success',
+    valuation_index=?,
+    calculated_grade=?,
+    expected_grade=?,
+    validation_status=?,
+    last_error=NULL,
+    updated_at=CURRENT_TIMESTAMP
+WHERE row_id=?
+"""
+
+update_failure = """
+UPDATE process_control 
+SET status='failed', last_error=?, attempts=attempts+1, updated_at=CURRENT_TIMESTAMP
+WHERE row_id=?
+"""
+
+# Report queries
+validation_summary = """
+SELECT 
+    validation_status,
+    COUNT(*) as count,
+    ROUND(AVG(valuation_index), 2) as avg_index
+FROM process_control
+WHERE status = 'success'
+GROUP BY validation_status
+ORDER BY validation_status
+"""
+
+grade_distribution = """
+SELECT 
+    calculated_grade,
+    COUNT(*) as count
+FROM process_control
+WHERE status = 'success'
+GROUP BY calculated_grade
+ORDER BY calculated_grade
+"""
+
+mismatches = """
+SELECT 
+    main_data.emp_id,
+    main_data.emp_name,
+    process_control.valuation_index,
+    process_control.calculated_grade,
+    process_control.expected_grade
+FROM main_data
+INNER JOIN process_control ON main_data.row_id = process_control.row_id
+WHERE process_control.validation_status = 'FAIL'
+ORDER BY main_data.row_id
+"""
+
+status_summary = """
+SELECT status, COUNT(*) as count
+FROM process_control
+{where_clause}
+GROUP BY status
+ORDER BY status
+"""
+
+total_count = """
+SELECT COUNT(*) FROM process_control {where_clause}
+"""
+
+failure_count = """
+SELECT COUNT(*) FROM process_control WHERE status='failed'
+"""
+
+count_main_data = """
+SELECT COUNT(*) FROM main_data
+"""
+
+# Reset operations
+reset_failed = """
+UPDATE process_control SET status='pending' WHERE status='failed'
+"""
+
+reset_range = """
+UPDATE process_control SET status='pending', last_error=NULL, attempts=0
+"""

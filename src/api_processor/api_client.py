@@ -47,6 +47,9 @@ class APIClient:
     
     async def call_with_retry(self, url: str, row_id: int) -> dict[str, Any]:
         """Call API with exponential backoff retry logic"""
+        if self.client is None:
+            raise RuntimeError("API client not initialized. Use async context manager.")
+        
         max_retries = self.config.max_retries
         
         for attempt in range(max_retries):
