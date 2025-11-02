@@ -11,6 +11,11 @@ class ConfigError(Exception):
 
 
 class Config:
+    """Configuration related errors"""
+    pass
+
+
+class Config:
     """Application configuration"""
     
     def __init__(self, config_path: str = "config.toml"):

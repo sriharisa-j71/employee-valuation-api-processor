@@ -7,6 +7,7 @@ from .api_client import APIClient
 from .config import Config
 from .database import Database
 from .valuation import EmployeeValuator
+from .performance_decorators import measure_async_performance, measure_batch_performance
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class Orchestrator:
         self.database = database
         self.valuator = EmployeeValuator(config._config.get("valuation", {}))
     
+    @measure_async_performance(include_memory=True, threshold_ms=100.0, include_args=True)
     async def process_row(self, row: tuple, api_client: APIClient) -> bool:
         """Process a single employee: Call 3 APIs, calculate valuation, validate grade"""
         row_id = row[0]
@@ -73,6 +75,7 @@ class Orchestrator:
             logger.error(f"Row {row_id} ({emp_id}): ✗ Failed - {e}")
             return False
     
+    @measure_batch_performance()
     async def process_batch(self, rows: list[tuple]) -> None:
         """Process a batch of rows with concurrency control"""
         if not rows:

@@ -3,6 +3,8 @@ import orjson
 from typing import Any, Dict, Optional, Union
 import logging
 
+from .performance_decorators import measure_performance
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +56,7 @@ class LightweightResponseParser:
                         continue
         return default
     
+    @measure_performance(include_memory=True, threshold_ms=2.0)
     def parse_salary_response(self, json_bytes: bytes) -> Dict[str, float]:
         """Parse salary API response - optimized for speed"""
         try:
@@ -67,6 +70,7 @@ class LightweightResponseParser:
             'years_of_service': self._fast_extract(data, self.salary_fields['years_of_service'], 1.0)
         }
     
+    @measure_performance(include_memory=True, threshold_ms=2.0)
     def parse_loans_response(self, json_bytes: bytes) -> Dict[str, float]:
         """Parse loans API response - optimized for speed"""
         try:
@@ -79,6 +83,7 @@ class LightweightResponseParser:
             'outstanding_amount': self._fast_extract(data, self.loans_fields['outstanding_amount'], 0.0)
         }
     
+    @measure_performance(include_memory=True, threshold_ms=2.0)
     def parse_awards_response(self, json_bytes: bytes) -> Dict[str, float]:
         """Parse awards API response - optimized for speed"""
         try:

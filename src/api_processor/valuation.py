@@ -1,6 +1,8 @@
 """Employee valuation calculation logic"""
 from typing import Any
 
+from .performance_decorators import measure_performance
+
 
 class ValidationError(Exception):
     """Valuation data validation errors"""
@@ -28,6 +30,7 @@ class EmployeeValuator:
         except (TypeError, ValueError) as e:
             raise ValidationError(f"Invalid {field_name} value '{value}': {e}")
 
+    @measure_performance(include_memory=True, threshold_ms=5.0, include_args=True)
     def calculate_index(
         self,
         salary_data: dict[str, Any],
@@ -78,6 +81,7 @@ class EmployeeValuator:
         total_index = salary_score + service_score + loan_score + awards_score
         return round(total_index, 2)
     
+    @measure_performance(include_memory=False, threshold_ms=1.0)
     def calculate_grade(self, valuation_index: float) -> str:
         """Determine grade based on valuation index"""
         if valuation_index >= self.grade_a_min:

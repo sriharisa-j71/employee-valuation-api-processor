@@ -4,13 +4,38 @@ import logging
 import sys
 
 import typer
+from rich.console import Console
+from rich.logging import RichHandler
+from rich.table import Table
+from rich.text import Text
+from rich import print as rprint
 
 from .config import Config, ConfigError
 from .database import Database
 from .orchestrator import Orchestrator
+from .performance_decorators import get_performance_summary, reset_performance_metrics
+from .emoji_support import emoji_handler
+from tabulate import tabulate
 
 app = typer.Typer()
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+console = Console()
+
+# Configure file logging
+file_handler = logging.FileHandler('employee_processor.log')
+file_handler.setLevel(logging.DEBUG)
+file_formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+file_handler.setFormatter(file_formatter)
+
+# Configure console logging with Rich (for user-facing messages only)
+console_handler = RichHandler(console=console, rich_tracebacks=True)
+console_handler.setLevel(logging.WARNING)  # Only warnings and errors to console
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[file_handler, console_handler]
+)
 logger = logging.getLogger(__name__)
 
 
@@ -20,14 +45,18 @@ def load(file: str = typer.Argument(..., help="Path to input pipe-separated file
     try:
         config = Config()
     except ConfigError as e:
-        logger.error(f"Configuration error: {e}")
+        console.print(f"{emoji_handler.get_status_icon('error')} [red]Configuration error:[/red] {e}")
         sys.exit(1)
     
     db = Database(config)
     
     try:
+        console.print(emoji_handler.format_message("loading", f"[cyan]Loading data from[/cyan] {file}..."))
         total = db.load_data(file)
-        logger.info(f"✓ Successfully loaded {total} employee records")
+        console.print(emoji_handler.format_message("complete", f"[green]Successfully loaded[/green] [bold]{total:,}[/bold] [cyan]employee records[/cyan]"))
+    except Exception as e:
+        console.print(f"{emoji_handler.get_status_icon('error')} [red]Failed to load data:[/red] {e}")
+        sys.exit(1)
     finally:
         db.close()
 
@@ -42,7 +71,7 @@ def process(
     try:
         config = Config()
     except ConfigError as e:
-        logger.error(f"Configuration error: {e}")
+        console.print(f"{emoji_handler.get_status_icon('error')} [red]Configuration error:[/red] {e}")
         sys.exit(1)
     
     db = Database(config)
@@ -50,24 +79,24 @@ def process(
     try:
         if reset_failed:
             db.reset_failed()
-            logger.info("Reset failed records to pending")
+            console.print(emoji_handler.format_message("reset", "[yellow]Reset failed records to pending[/yellow]"))
         
         # Get pending rows
         pending_rows = db.get_pending_rows(start, end)
         
         if not pending_rows:
-            logger.info("No pending records to process")
+            console.print(f"{emoji_handler.get_status_icon('info')} [blue]No pending records to process[/blue]")
             return
         
         # Log range info
         if start and end:
-            logger.info(f"Processing lines {start} to {end}...")
+            console.print(emoji_handler.format_message("processing", f"[cyan]Processing lines[/cyan] [bold]{start}[/bold] [cyan]to[/cyan] [bold]{end}[/bold]..."))
         elif start:
-            logger.info(f"Processing lines from {start} onwards...")
+            console.print(emoji_handler.format_message("processing", f"[cyan]Processing lines from[/cyan] [bold]{start}[/bold] [cyan]onwards...[/cyan]"))
         elif end:
-            logger.info(f"Processing lines up to {end}...")
+            console.print(emoji_handler.format_message("processing", f"[cyan]Processing lines up to[/cyan] [bold]{end}[/bold]..."))
         else:
-            logger.info("Processing all pending lines...")
+            console.print(emoji_handler.format_message("processing", "[cyan]Processing all pending lines...[/cyan]"))
         
         # Process batch
         orchestrator = Orchestrator(config, db)
@@ -76,10 +105,10 @@ def process(
         # Check failure threshold
         total_failures = db.get_failure_count()
         if total_failures >= config.max_failures:
-            logger.critical(f"✗ Failure limit exceeded ({total_failures}/{config.max_failures}). Exiting.")
+            console.print(f"{emoji_handler.get_status_icon('error')} [red]Failure limit exceeded[/red] ([bold]{total_failures}/{config.max_failures}[/bold]). [red]Exiting.[/red]")
             sys.exit(1)
         
-        logger.info("✓ Processing complete")
+        console.print(emoji_handler.format_message("complete", "[green]Processing complete[/green]"))
         
     finally:
         db.close()
@@ -100,20 +129,39 @@ def status(
         
         # Build title
         if start and end:
-            title = f"Processing Status (Lines {start}-{end})"
+            title_text = f"Processing Status (Lines {start}-{end})"
         elif start:
-            title = f"Processing Status (Lines {start}+)"
+            title_text = f"Processing Status (Lines {start}+)"
         elif end:
-            title = f"Processing Status (Lines up to {end})"
+            title_text = f"Processing Status (Lines up to {end})"
         else:
-            title = "Processing Status (All Lines)"
+            title_text = "Processing Status (All Lines)"
         
-        print(f"\n=== {title} ===")
+        title = emoji_handler.format_message("validation", title_text)
+        console.print(f"\n[bold cyan]{title}[/bold cyan]")
+        
+        # Create Rich table
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Status", style="cyan", no_wrap=True)
+        table.add_column("Count", justify="right", style="green")
+        table.add_column("Percentage", justify="right", style="yellow")
+        
+        # Add status rows with emoji handler
         for status, count in summary:
             percentage = (count / total * 100) if total > 0 else 0
-            print(f"{status:10s}: {count:6d} ({percentage:5.1f}%)")
-        print(f"{'Total':10s}: {total:6d}")
-        print()
+            status_row = emoji_handler.format_status_row(status, status.title())
+            table.add_row(
+                status_row, 
+                f"{count:,}", 
+                f"{percentage:.1f}%"
+            )
+        
+        # Add total row
+        total_row = emoji_handler.format_status_row("total", "TOTAL")
+        table.add_row(total_row, f"{total:,}", "100.0%", style="bold")
+        
+        console.print(table)
+        console.print()
         
     finally:
         db.close()
@@ -121,34 +169,73 @@ def status(
 
 @app.command()
 def report():
-    """Generate validation report"""
+    """📋 Generate validation report"""
     config = Config()
     db = Database(config)
     
     try:
         # Validation summary
-        print("\n=== Validation Summary ===")
+        title = emoji_handler.format_message("validation", "Validation Summary")
+        console.print(f"\n[bold cyan]{title}[/bold cyan]")
         validation_summary = db.get_validation_summary()
-        for validation_status, count, avg_index in validation_summary:
-            print(f"{validation_status:10s}: {count:4d} records (Avg Index: {avg_index})")
+        if validation_summary:
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("Status", style="cyan", no_wrap=True)
+            table.add_column("Count", justify="right", style="green")
+            table.add_column("Avg Index", justify="right", style="yellow")
+            
+            for status, count, avg_index in validation_summary:
+                status_row = emoji_handler.format_status_row(status, status.title())
+                table.add_row(
+                    status_row, 
+                    f"{count:,}", 
+                    f"{avg_index:.2f}" if avg_index else "N/A"
+                )
+            console.print(table)
+        else:
+            console.print(f"{emoji_handler.get_status_icon('warning')} [yellow]No validation data available[/yellow]")
         
         # Grade distribution
-        print("\n=== Grade Distribution ===")
+        title = emoji_handler.format_message("distribution", "Grade Distribution")
+        console.print(f"\n[bold cyan]{title}[/bold cyan]")
         grade_dist = db.get_grade_distribution()
-        for grade, count in grade_dist:
-            print(f"Grade {grade}: {count:4d} employees")
+        if grade_dist:
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("Grade", style="cyan", no_wrap=True)
+            table.add_column("Count", justify="right", style="green")
+            
+            for grade, count in grade_dist:
+                grade_row = emoji_handler.format_message("grade", f"Grade {grade}")
+                table.add_row(grade_row, f"{count:,}")
+            console.print(table)
+        else:
+            console.print(f"{emoji_handler.get_status_icon('warning')} [yellow]No grade data available[/yellow]")
         
         # Mismatches
-        print("\n=== Validation Failures (Grade Mismatches) ===")
+        title = emoji_handler.format_message("failures", "Validation Failures (Grade Mismatches)")
+        console.print(f"\n[bold cyan]{title}[/bold cyan]")
         mismatches = db.get_mismatches()
         if mismatches:
-            print(f"{'Emp ID':<10} {'Name':<20} {'Index':<8} {'Calculated':<12} {'Expected':<10}")
-            print("-" * 70)
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("Employee ID", style="cyan")
+            table.add_column("Name", style="white")
+            table.add_column("Index", justify="right", style="yellow")
+            table.add_column("Calculated", style="green")
+            table.add_column("Expected", style="red")
+            
             for emp_id, emp_name, index, calc_grade, exp_grade in mismatches:
-                print(f"{emp_id:<10} {emp_name:<20} {index:<8.2f} {calc_grade:<12} {exp_grade:<10}")
+                table.add_row(
+                    str(emp_id),
+                    emp_name[:20],
+                    f"{index:.2f}",
+                    calc_grade,
+                    exp_grade
+                )
+            console.print(table)
         else:
-            print("✓ No mismatches found - all validations passed!")
-        print()
+            success_msg = emoji_handler.format_message("complete", "[bold green]No mismatches found - all validations passed![/bold green]")
+            console.print(success_msg)
+        console.print()
         
     finally:
         db.close()
@@ -159,7 +246,7 @@ def reset(
     start: int = typer.Option(None, help="Start line number"),
     end: int = typer.Option(None, help="End line number")
 ):
-    """Reset records to pending status"""
+    """🔄 Reset records to pending status"""
     config = Config()
     db = Database(config)
     
@@ -167,15 +254,29 @@ def reset(
         db.reset_range(start, end)
         
         if start and end:
-            logger.info(f"✓ Reset lines {start}-{end} to pending")
+            console.print(emoji_handler.format_message("complete", f"[bold green]Reset lines {start}-{end} to pending[/bold green]"))
         elif start:
-            logger.info(f"✓ Reset lines {start}+ to pending")
+            console.print(emoji_handler.format_message("complete", f"[bold green]Reset lines {start}+ to pending[/bold green]"))
         elif end:
-            logger.info(f"✓ Reset lines up to {end} to pending")
+            console.print(emoji_handler.format_message("complete", f"[bold green]Reset lines up to {end} to pending[/bold green]"))
         else:
-            logger.info("✓ Reset all lines to pending")
+            console.print(emoji_handler.format_message("complete", "[bold green]Reset all lines to pending[/bold green]"))
     finally:
         db.close()
+
+
+@app.command()
+def perf():
+    """📊 Show performance metrics summary"""
+    summary = get_performance_summary()
+    console.print(summary)
+
+
+@app.command()
+def perf_reset():
+    """🔄 Reset performance metrics"""
+    reset_performance_metrics()
+    console.print(emoji_handler.format_message("complete", "[bold green]Performance metrics reset[/bold green]"))
 
 
 if __name__ == "__main__":

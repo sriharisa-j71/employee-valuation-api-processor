@@ -41,6 +41,9 @@ env/
 .DS_Store
 Thumbs.db
 
+# Logs
+*.log
+
 # uv
 .uv/
 uv.lock

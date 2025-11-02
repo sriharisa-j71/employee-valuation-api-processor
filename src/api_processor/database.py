@@ -5,6 +5,7 @@ from typing import Any
 import duckdb
 
 from .config import Config
+from .performance_decorators import measure_performance
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class Database:
         """Close database connection"""
         self.conn.close()
     
+    @measure_performance(include_memory=True, threshold_ms=50.0, log_level=logging.INFO)
     def load_data(self, file_path: str) -> int:
         """Load pipe-separated employee data into main_data table"""
         logger.info(f"Loading data from {file_path}...")
@@ -39,6 +41,7 @@ class Database:
         logger.info(f"✓ Loaded {total} records")
         return total
     
+    @measure_performance(include_memory=True, threshold_ms=20.0)
     def get_pending_rows(self, start: int | None = None, end: int | None = None) -> list[tuple]:
         """Get pending rows within optional range"""
         conditions = ["process_control.status = 'pending'"]
@@ -63,6 +66,7 @@ class Database:
         
         return self.conn.execute(query, params).fetchall()
     
+    @measure_performance(include_memory=False, threshold_ms=5.0)
     def update_success_with_results(
         self,
         row_id: int,
@@ -77,6 +81,7 @@ class Database:
             [valuation_index, calculated_grade, expected_grade, validation_status, row_id]
         )
     
+    @measure_performance(include_memory=False, threshold_ms=5.0)
     def update_failure(self, row_id: int, error_msg: str) -> None:
         """Mark row as failed"""
         error_msg = str(error_msg)[:500]
@@ -94,6 +99,7 @@ class Database:
         """Get records where calculated grade != expected grade"""
         return self.conn.execute(self.sql["mismatches"]).fetchall()
     
+    @measure_performance(include_memory=True, threshold_ms=0.0, log_level=logging.INFO)
     def get_status_summary(self, start: int | None = None, end: int | None = None) -> list[tuple]:
         """Get status summary with optional range filter"""
         conditions = []

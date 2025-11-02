@@ -8,6 +8,7 @@ import orjson
 
 from .config import Config
 from .optimized_parser import LightweightResponseParser
+from .performance_decorators import measure_async_performance, measure_performance
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class APIClient:
         self.client: httpx.AsyncClient | None = None
         self.parser = LightweightResponseParser()  # Lightweight parser for medium-scale data
     
+    @measure_performance(include_memory=True, threshold_ms=5.0)
     def create_client(self) -> httpx.AsyncClient:
         """Create httpx AsyncClient with connection pool configuration"""
         http_config = self.config.http
@@ -47,6 +49,7 @@ class APIClient:
         
         return client
     
+    @measure_async_performance(include_memory=True, threshold_ms=10.0, include_args=True)
     async def call_with_retry(self, url: str, row_id: int, response_type: str) -> dict[str, Any]:
         """Call API with exponential backoff retry logic and optimized parsing"""
         if self.client is None:
