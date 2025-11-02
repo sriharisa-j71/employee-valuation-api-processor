@@ -266,10 +266,37 @@ def reset(
 
 
 @app.command()
-def perf():
+def perf(
+    memory_unit: str = typer.Option("mb", help="Memory unit: bytes, kb, mb, gb"),
+    time_unit: str = typer.Option("auto", help="Time unit: ns, us, ms, s, auto")
+):
     """📊 Show performance metrics summary"""
-    summary = get_performance_summary()
-    console.print(summary)
+    # Validate units
+    valid_memory_units = ["bytes", "kb", "mb", "gb"]
+    valid_time_units = ["ns", "us", "ms", "s", "auto"]
+    
+    if memory_unit.lower() not in valid_memory_units:
+        console.print(f"{emoji_handler.get_status_icon('error')} [red]Invalid memory unit. Valid options: {', '.join(valid_memory_units)}[/red]")
+        raise typer.Exit(1)
+    
+    if time_unit.lower() not in valid_time_units:
+        console.print(f"{emoji_handler.get_status_icon('error')} [red]Invalid time unit. Valid options: {', '.join(valid_time_units)}[/red]")
+        raise typer.Exit(1)
+    
+    result = get_performance_summary(memory_unit.lower(), time_unit.lower())
+    
+    if result[0] is None:  # No metrics available
+        console.print(result[3][0])  # Print the "no metrics" message
+        return
+    
+    main_table, summary_table, slowest_table, title_messages = result
+    
+    # Print with full terminal width
+    console.print(main_table)
+    console.print(f"\n[bold cyan]{title_messages[0]}[/bold cyan]")
+    console.print(summary_table)
+    console.print(f"\n[bold red]{title_messages[1]}[/bold red]")
+    console.print(slowest_table)
 
 
 @app.command()
