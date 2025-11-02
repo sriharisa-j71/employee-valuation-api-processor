@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/salary/(.+)"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "emp_id": "{{request.pathSegments.[3]}}",
+      "emp_type": "FTE",
+      "base_salary": 75000,
+      "bonus": 15000,
+      "years_of_service": 5
+    },
+    "transformers": ["response-template"]
+  }
+}

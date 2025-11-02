@@ -1,0 +1,13 @@
+[project]
+name = "api-processor"
+version = "0.1.0"
+description = "Process large files with API calls using DuckDB control"
+requires-python = ">=3.11"
+dependencies = [
+    "duckdb>=1.0.0",
+    "httpx>=0.27.0",
+    "orjson>=3.10.0",
+    "typer>=0.12.0",
+]
+
+

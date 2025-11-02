@@ -1,0 +1,24 @@
+[processing]
+concurrency = 5
+max_retries = 3
+max_failures = 20
+
+[api]
+base_url = "http://localhost:8080"
+endpoint_salary = "/api/v1/salary/{emp_id}"
+endpoint_loans = "/api/v1/loans/{emp_id}"
+endpoint_awards = "/api/v1/awards/{emp_id}"
+
+[http]
+max_connections = 20
+max_keepalive_connections = 10
+keepalive_expiry = 30.0
+timeout = 10.0
+
+[database]
+path = "db.duckdb"
+
+[valuation]
+grade_a_min = 80
+grade_b_min = 60
+grade_c_min = 40

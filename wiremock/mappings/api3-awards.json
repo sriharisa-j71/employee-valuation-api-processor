@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/awards/(.+)"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "emp_id": "{{request.pathSegments.[3]}}",
+      "total_awards": 5,
+      "recognitions": 10,
+      "performance_rating": 4
+    },
+    "transformers": ["response-template"]
+  }
+}

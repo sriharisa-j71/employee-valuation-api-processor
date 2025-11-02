@@ -1,0 +1,11 @@
+emp_id|emp_name|emp_type|dept|expected_grade
+E001|John Doe|FTE|Engineering|A
+E002|Jane Smith|FTE|Sales|B
+E003|Bob Johnson|Contractor|Marketing|C
+E004|Alice Williams|FTE|Engineering|A
+E005|Charlie Brown|FTE|HR|B
+E006|Diana Prince|Contractor|Sales|D
+E007|Eve Anderson|FTE|Engineering|A
+E008|Frank Miller|FTE|Finance|C
+E009|Grace Lee|Contractor|Marketing|D
+E010|Henry Wilson|FTE|Engineering|B

@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/loans/(.+)"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "emp_id": "{{request.pathSegments.[3]}}",
+      "total_loans": 2,
+      "outstanding_amount": 10000,
+      "repayment_score": 85
+    },
+    "transformers": ["response-template"]
+  }
+}
