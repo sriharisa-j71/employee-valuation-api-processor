@@ -1,0 +1,17 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/loans/(.+)"
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "error": "Missing required X-Salary-Token header",
+      "code": "MISSING_SALARY_TOKEN"
+    }
+  }
+}

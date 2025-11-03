@@ -1,0 +1,17 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/awards/(.+)"
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "error": "Missing required X-Loan-Token header",
+      "code": "MISSING_LOAN_TOKEN"
+    }
+  }
+}

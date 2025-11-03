@@ -1,18 +1,27 @@
 {
+  "priority": 1,
   "request": {
     "method": "GET",
-    "urlPathPattern": "/api/v1/loans/(.+)"
+    "urlPathPattern": "/api/v1/loans/(.+)",
+    "headers": {
+      "X-Salary-Token": {
+        "contains": "salary_"
+      }
+    }
   },
   "response": {
     "status": 200,
     "headers": {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "X-Loan-Token": "loan_{{request.pathSegments.[3]}}_{{randomValue length=8 type='ALPHANUMERIC'}}"
     },
     "jsonBody": {
       "emp_id": "{{request.pathSegments.[3]}}",
       "total_loans": 2,
       "outstanding_amount": 10000,
-      "repayment_score": 85
+      "repayment_score": 85,
+      "loan_token": "loan_{{request.pathSegments.[3]}}_{{randomValue length=8 type='ALPHANUMERIC'}}",
+      "debug_received_token": "{{request.headers.X-Salary-Token}}"
     },
     "transformers": ["response-template"]
   }

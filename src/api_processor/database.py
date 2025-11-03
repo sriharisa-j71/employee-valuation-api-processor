@@ -87,6 +87,40 @@ class Database:
         error_msg = str(error_msg)[:500]
         self.conn.execute(self.sql["update_failure"], [error_msg, row_id])
     
+    @measure_performance(include_memory=False, threshold_ms=10.0)
+    def batch_update_results(self, results: list[dict]) -> None:
+        """Batch update multiple results for better performance"""
+        if not results:
+            return
+        
+        success_data = []
+        failure_data = []
+        
+        for result in results:
+            if result.get('success', False):
+                success_data.append([
+                    result['valuation_index'],
+                    result['calculated_grade'], 
+                    result['expected_grade'],
+                    result['validation_status'],
+                    result['row_id']
+                ])
+            else:
+                failure_data.append([
+                    str(result['error'])[:500],
+                    result['row_id']
+                ])
+        
+        # Batch update successes
+        if success_data:
+            self.conn.executemany(self.sql["update_success_with_results"], success_data)
+            
+        # Batch update failures  
+        if failure_data:
+            self.conn.executemany(self.sql["update_failure"], failure_data)
+            
+        logger.info(f"Batch updated: {len(success_data)} successes, {len(failure_data)} failures")
+    
     def get_validation_summary(self) -> list[tuple]:
         """Get validation summary (PASS/FAIL counts)"""
         return self.conn.execute(self.sql["validation_summary"]).fetchall()

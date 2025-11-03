@@ -1,19 +1,31 @@
 [processing]
-concurrency = 5
+concurrency = 10         # Increased from 5 to utilize better connection pooling
 max_retries = 3
 max_failures = 20
 
 [api]
+salary_base_url = "http://localhost:8080"
+loans_base_url = "http://localhost:8080"   
+awards_base_url = "http://localhost:8080"
+
+# Original single host config (for backward compatibility)
 base_url = "http://localhost:8080"
+
 endpoint_salary = "/api/v1/salary/{emp_id}"
 endpoint_loans = "/api/v1/loans/{emp_id}"
 endpoint_awards = "/api/v1/awards/{emp_id}"
 
 [http]
-max_connections = 20
-max_keepalive_connections = 10
-keepalive_expiry = 30.0
-timeout = 10.0
+# Multi-host optimized settings
+max_connections = 100        # Increased total connections across all hosts
+max_keepalive_connections = 50  # More keepalive connections for multiple hosts
+keepalive_expiry = 300.0     # Longer expiry for cross-network connections (5 min)
+timeout = 30.0               # Longer timeout for real network latency
+
+# Per-host connection limits (for future implementation)
+max_connections_per_host = 20  # Limit per individual host to prevent overwhelming
+connection_retries = 3         # Network-specific retry count
+connect_timeout = 10.0         # Separate connect vs read timeout
 
 [response_parsing]
 # Field mapping for flexible API response parsing

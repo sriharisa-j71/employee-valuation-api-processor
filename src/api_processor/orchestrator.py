@@ -21,8 +21,9 @@ class Orchestrator:
         self.valuator = EmployeeValuator(config._config.get("valuation", {}))
     
     @measure_async_performance(include_memory=True, threshold_ms=100.0, include_args=True)
-    async def process_row(self, row: tuple, api_client: APIClient) -> bool:
-        """Process a single employee: Call 3 APIs, calculate valuation, validate grade"""
+    async def process_row(self, row: tuple, api_client: APIClient) -> dict:
+        """Process a single employee: Call 3 APIs, calculate valuation, validate grade
+        Returns result dict instead of updating database directly for batch processing"""
         row_id = row[0]
         emp_id = row[1]
         emp_name = row[2]
@@ -31,23 +32,42 @@ class Orchestrator:
         expected_grade = row[5]
         
         api_config = self.config.api
-        base_url = api_config.get("base_url", "http://localhost:8080")
+        
+        # Multi-host URL construction - each API can be on different hosts
+        salary_base = api_config.get("salary_base_url", api_config.get("base_url", "http://localhost:8080"))
+        loans_base = api_config.get("loans_base_url", api_config.get("base_url", "http://localhost:8080"))
+        awards_base = api_config.get("awards_base_url", api_config.get("base_url", "http://localhost:8080"))
         
         try:
-            # Step 1: Call API1 - Salary Data
-            url1 = base_url + api_config["endpoint_salary"].format(emp_id=emp_id)
-            logger.info(f"Row {row_id} ({emp_id}): Calling Salary API...")
+            # API Chain: API1 -> API2 -> API3 (each depends on the previous)
+            # Each API potentially on different hosts for production scalability
+            
+            # Step 1: Call API1 - Salary Data (independent)
+            url1 = salary_base + api_config["endpoint_salary"].format(emp_id=emp_id)
+            logger.debug(f"Row {row_id} ({emp_id}): Calling Salary API at {salary_base}...")
             salary_data = await api_client.call_with_retry(url1, row_id, "salary")
             
-            # Step 2: Call API2 - Loans Data
-            url2 = base_url + api_config["endpoint_loans"].format(emp_id=emp_id)
-            logger.info(f"Row {row_id} ({emp_id}): Calling Loans API...")
-            loans_data = await api_client.call_with_retry(url2, row_id, "loans")
+            # Step 2: Call API2 - Loans Data (requires salary token)
+            url2 = loans_base + api_config["endpoint_loans"].format(emp_id=emp_id)
+            logger.debug(f"Row {row_id} ({emp_id}): Calling Loans API at {loans_base}...")
             
-            # Step 3: Call API3 - Awards Data
-            url3 = base_url + api_config["endpoint_awards"].format(emp_id=emp_id)
-            logger.info(f"Row {row_id} ({emp_id}): Calling Awards API...")
-            awards_data = await api_client.call_with_retry(url3, row_id, "awards")
+            # Extract salary token for API2 dependency
+            loans_headers = {}
+            if '_salary_token' in salary_data:
+                loans_headers['X-Salary-Token'] = salary_data['_salary_token']
+            
+            loans_data = await api_client.call_with_retry(url2, row_id, "loans", loans_headers)
+            
+            # Step 3: Call API3 - Awards Data (requires loan token)
+            url3 = awards_base + api_config["endpoint_awards"].format(emp_id=emp_id)
+            logger.debug(f"Row {row_id} ({emp_id}): Calling Awards API at {awards_base}...")
+            
+            # Extract loan token for API3 dependency
+            awards_headers = {}
+            if '_loan_token' in loans_data:
+                awards_headers['X-Loan-Token'] = loans_data['_loan_token']
+            
+            awards_data = await api_client.call_with_retry(url3, row_id, "awards", awards_headers)
             
             # Step 4: Calculate valuation index
             valuation_index = self.valuator.calculate_index(salary_data, loans_data, awards_data)
@@ -62,22 +82,28 @@ class Orchestrator:
                 f"Status={validation_status}"
             )
             
-            # Step 6: Update database with results
-            self.database.update_success_with_results(
-                row_id, valuation_index, calculated_grade, expected_grade, validation_status
-            )
-            
-            return True
+            # Return success result for batch update
+            return {
+                'success': True,
+                'row_id': row_id,
+                'valuation_index': valuation_index,
+                'calculated_grade': calculated_grade,
+                'expected_grade': expected_grade,
+                'validation_status': validation_status
+            }
             
         except Exception as e:
-            # Failure
-            self.database.update_failure(row_id, str(e))
+            # Return failure result for batch update
             logger.error(f"Row {row_id} ({emp_id}): ✗ Failed - {e}")
-            return False
+            return {
+                'success': False,
+                'row_id': row_id,
+                'error': str(e)
+            }
     
     @measure_batch_performance()
     async def process_batch(self, rows: list[tuple]) -> None:
-        """Process a batch of rows with concurrency control"""
+        """Process a batch of rows with concurrency control and batch database updates"""
         if not rows:
             logger.info("No rows to process")
             return
@@ -95,15 +121,30 @@ class Orchestrator:
             tasks = [process_with_semaphore(row) for row in rows]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             
-            # Process any exceptions that occurred
+            # Collect all results for batch database update
+            batch_results = []
             failed_count = 0
+            exception_count = 0
+            
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     row_id = rows[i][0]
                     emp_id = rows[i][1]
                     logger.error(f"Row {row_id} ({emp_id}): Unhandled exception - {result}")
-                    failed_count += 1
-                elif result is False:
-                    failed_count += 1
+                    batch_results.append({
+                        'success': False,
+                        'row_id': row_id,
+                        'error': str(result)
+                    })
+                    exception_count += 1
+                else:
+                    batch_results.append(result)
+                    if not result.get('success', False):
+                        failed_count += 1
             
-            logger.info(f"Batch processing complete: {len(rows) - failed_count}/{len(rows)} successful")
+            # Batch update database with all results
+            if batch_results:
+                self.database.batch_update_results(batch_results)
+            
+            total_failed = failed_count + exception_count
+            logger.info(f"Batch processing complete: {len(rows) - total_failed}/{len(rows)} successful")

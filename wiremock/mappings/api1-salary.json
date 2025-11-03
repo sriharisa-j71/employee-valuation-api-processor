@@ -6,14 +6,16 @@
   "response": {
     "status": 200,
     "headers": {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "X-Salary-Token": "salary_{{request.pathSegments.[3]}}_{{randomValue length=8 type='ALPHANUMERIC'}}"
     },
     "jsonBody": {
       "emp_id": "{{request.pathSegments.[3]}}",
       "emp_type": "FTE",
       "base_salary": 75000,
       "bonus": 15000,
-      "years_of_service": 5
+      "years_of_service": 5,
+      "salary_token": "salary_{{request.pathSegments.[3]}}_{{randomValue length=8 type='ALPHANUMERIC'}}"
     },
     "transformers": ["response-template"]
   }

@@ -1,7 +1,13 @@
 {
+  "priority": 1,
   "request": {
     "method": "GET",
-    "urlPathPattern": "/api/v1/awards/(.+)"
+    "urlPathPattern": "/api/v1/awards/(.+)",
+    "headers": {
+      "X-Loan-Token": {
+        "contains": "loan_"
+      }
+    }
   },
   "response": {
     "status": 200,
@@ -12,7 +18,8 @@
       "emp_id": "{{request.pathSegments.[3]}}",
       "total_awards": 5,
       "recognitions": 10,
-      "performance_rating": 4
+      "performance_rating": 4,
+      "debug_received_token": "{{request.headers.X-Loan-Token}}"
     },
     "transformers": ["response-template"]
   }
