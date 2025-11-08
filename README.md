@@ -2,6 +2,13 @@
 
 A production-ready system for processing large employee files, calling multiple REST APIs, calculating employee valuation scores, and validating grade assignments.
 
+## 📚 CKAD Study Materials
+
+This repository includes comprehensive study materials for the Certified Kubernetes Application Developer (CKAD) exam:
+- **[CKAD-Resources.md](./CKAD-Resources.md)** - Links organized by exam domains & competencies
+- **[CKAD-Common-Pitfalls.md](./CKAD-Common-Pitfalls.md)** - Common mistakes and how to avoid them
+- **[CKAD-4-Day-Study-Plan.md](./CKAD-4-Day-Study-Plan.md)** - Intensive 4-day study schedule
+
 ## Features
 
 ✅ **Batch Processing** - Process large files in configurable batches by line ranges  
