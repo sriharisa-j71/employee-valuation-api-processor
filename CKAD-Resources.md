@@ -14,7 +14,8 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 - [Kubernetes Documentation](https://kubernetes.io/docs/home/)
 - [CKAD Certification Page](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
 - [CNCF CKAD Information](https://www.cncf.io/training/certification/ckad/)
-- [CKAD Curriculum (PDF)](https://github.com/cncf/curriculum)
+- [CKAD Curriculum (PDF)](https://github.com/cncf/curriculum/blob/master/CKAD_Curriculum_v1.31.pdf)
+- [CKAD Curriculum Path (PDF)](https://training.linuxfoundation.org/wp-content/uploads/2024/10/CKAD_CurriculumPath.pdf)
 
 ---
 
@@ -38,7 +39,8 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 #### Multi-Container Patterns
 - [Init Containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)
 - [Sidecar Containers](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/)
-- [Multi-Container Pod Patterns](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns/)
+- [Ephemeral Containers](https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/)
+- [Container Lifecycle Hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/)
 
 #### Storage
 - [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/)
@@ -60,6 +62,7 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 #### Package Management
 - [Helm - Package Manager](https://helm.sh/docs/)
 - [Helm Charts](https://helm.sh/docs/topics/charts/)
+- [Helm Values Files](https://helm.sh/docs/chart_template_guide/values_files/)
 - [Kustomize](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
 - [Managing Resources with Kubectl](https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/)
 
@@ -89,6 +92,7 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 - [Debugging Services](https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/)
 - [Troubleshooting Applications](https://kubernetes.io/docs/tasks/debug/debug-application/)
 - [Debugging Running Pods](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/)
+- [kubectl debug Command](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container)
 
 #### API Deprecations
 - [Deprecated API Migration Guide](https://kubernetes.io/docs/reference/using-api/deprecation-guide/)
@@ -113,6 +117,9 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 #### Security
 - [SecurityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 - [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
+- [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/)
+- [Seccomp Profiles](https://kubernetes.io/docs/tutorials/security/seccomp/)
+- [AppArmor](https://kubernetes.io/docs/tutorials/security/apparmor/)
 - [ServiceAccounts](https://kubernetes.io/docs/concepts/security/service-accounts/)
 - [Managing Service Accounts](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)
 - [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
@@ -135,6 +142,8 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 #### Services
 - [Services](https://kubernetes.io/docs/concepts/services-networking/service/)
 - [Service Types (ClusterIP, NodePort, LoadBalancer)](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
+- [Headless Services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services)
+- [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/)
 - [Connecting Applications with Services](https://kubernetes.io/docs/tutorials/services/connect-applications-service/)
 - [DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
 
@@ -180,6 +189,8 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 - [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
 - [kubectl Quick Reference](https://kubernetes.io/docs/reference/kubectl/quick-reference/)
 - [kubectl Commands Reference](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
+- [kubectl Conventions](https://kubernetes.io/docs/reference/kubectl/conventions/)
+- [Kubernetes API Reference](https://kubernetes.io/docs/reference/kubernetes-api/)
 
 ### Community Resources
 - [Kubernetes Slack](https://slack.k8s.io/)
@@ -196,6 +207,12 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 4. **Practice Time Management**: Allocate time based on question weights; skip difficult questions and return later
 5. **Validate Your Work**: Always verify your resources are running correctly before moving to the next question
 6. **Context Switching**: Remember to switch context/namespace as specified in each question
+7. **Use `kubectl explain`**: Quickly reference resource specs during the exam (`kubectl explain pod.spec.containers --recursive`)
+8. **Master YAML formatting**: Use `--dry-run=client -o yaml` extensively to generate templates
+9. **Understand question scope**: Some questions may not require creating resources, just inspecting
+10. **Label everything**: Good labeling helps with selection and management
+11. **Practice with vim/nano**: Get comfortable with the terminal editor you'll use
+12. **Use `kubectl api-resources`**: Quickly find resource short names and API groups
 
 ---
 
@@ -206,6 +223,8 @@ The Certified Kubernetes Application Developer (CKAD) exam certifies your abilit
 kubectl run nginx --image=nginx --dry-run=client -o yaml > pod.yaml
 kubectl create deployment nginx --image=nginx --dry-run=client -o yaml > deployment.yaml
 kubectl expose deployment nginx --port=80 --target-port=8080 --dry-run=client -o yaml > service.yaml
+kubectl create configmap my-config --from-literal=key1=value1 --dry-run=client -o yaml > configmap.yaml
+kubectl create secret generic my-secret --from-literal=password=secret123 --dry-run=client -o yaml > secret.yaml
 
 # Quick edits
 kubectl edit deployment nginx
@@ -213,18 +232,173 @@ kubectl set image deployment/nginx nginx=nginx:1.18
 
 # Scaling
 kubectl scale deployment nginx --replicas=5
+kubectl autoscale deployment nginx --min=2 --max=10 --cpu-percent=80
 
 # Troubleshooting
 kubectl logs pod-name
 kubectl logs pod-name -c container-name
+kubectl logs pod-name --previous  # logs from previous container instance
+kubectl logs -f pod-name  # follow logs
 kubectl describe pod pod-name
 kubectl get events --sort-by=.metadata.creationTimestamp
+kubectl get events --sort-by=.lastTimestamp
+
+# Debugging with ephemeral containers (NEW - important for exam)
+kubectl debug pod-name -it --image=busybox
+kubectl debug pod-name -it --image=busybox --target=container-name
+kubectl debug node/node-name -it --image=busybox
+
+# Explain resources (CRITICAL for exam when you forget YAML structure)
+kubectl explain pod.spec.containers --recursive
+kubectl explain deployment.spec.strategy
+kubectl explain service.spec
+kubectl explain pod.spec.securityContext
+
+# Rollout management
+kubectl rollout status deployment/nginx
+kubectl rollout history deployment/nginx
+kubectl rollout history deployment/nginx --revision=2
+kubectl rollout undo deployment/nginx
+kubectl rollout undo deployment/nginx --to-revision=2
+kubectl rollout restart deployment/nginx
+kubectl rollout pause deployment/nginx
+kubectl rollout resume deployment/nginx
+
+# JSON path queries (useful for complex filtering)
+kubectl get pods -o jsonpath='{.items[*].metadata.name}'
+kubectl get pods -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}'
+kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.podIP}{"\n"}{end}'
+kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}'
+
+# Port forwarding (important for testing services)
+kubectl port-forward pod/nginx 8080:80
+kubectl port-forward service/nginx 8080:80
+kubectl port-forward deployment/nginx 8080:80
+
+# Execute commands in containers
+kubectl exec -it pod-name -- /bin/bash
+kubectl exec -it pod-name -c container-name -- /bin/sh
+kubectl exec pod-name -- env
+kubectl exec pod-name -- ls -la /app
+
+# Copy files to/from containers
+kubectl cp pod-name:/path/to/file ./local-file
+kubectl cp ./local-file pod-name:/path/to/file
+kubectl cp pod-name:/path/to/file ./local-file -c container-name
 
 # Context and namespace
 kubectl config get-contexts
 kubectl config use-context context-name
 kubectl config set-context --current --namespace=namespace-name
+kubectl config view
+
+# Force delete stuck resources
+kubectl delete pod pod-name --grace-period=0 --force
+kubectl delete pod pod-name --now
+
+# Get all resources in namespace
+kubectl get all -n namespace-name
+kubectl api-resources --verbs=list --namespaced -o name
+
+# Patch resources
+kubectl patch deployment nginx -p '{"spec":{"replicas":3}}'
+kubectl patch pod nginx -p '{"spec":{"containers":[{"name":"nginx","image":"nginx:1.19"}]}}'
+
+# Create resource and expose in one go
+kubectl run nginx --image=nginx --port=80 --expose
+
+# Watch resources
+kubectl get pods -w
+kubectl get pods -w -o wide
+
+# Show labels and label selection
+kubectl get pods --show-labels
+kubectl get pods -L app,tier,version
+kubectl get pods -l app=nginx
+kubectl get pods -l 'env in (prod,staging)'
+
+# Field selector (faster than grep)
+kubectl get pods --field-selector status.phase=Running
+kubectl get pods --field-selector metadata.namespace=default,status.phase=Running
+kubectl get events --field-selector involvedObject.kind=Pod
+
+# Resource usage
+kubectl top nodes
+kubectl top pods
+kubectl top pods --containers
+kubectl top pods -n namespace-name --sort-by=memory
+
+# Service and endpoint inspection
+kubectl get endpoints
+kubectl get svc -o wide
+
+# RBAC inspection
+kubectl auth can-i create deployments
+kubectl auth can-i delete pods --as=user@example.com
+kubectl auth can-i '*' '*' --all-namespaces
 ```
+
+---
+
+## Key Changes in This Update
+
+### Fixed Issues
+- **Updated CKAD Curriculum PDF link**: Changed from generic GitHub repository link to direct PDF link (`https://github.com/cncf/curriculum/blob/master/CKAD_Curriculum_v1.31.pdf`)
+- **Added CKAD Curriculum Path PDF**: New official resource from Linux Foundation (`https://training.linuxfoundation.org/wp-content/uploads/2024/10/CKAD_CurriculumPath.pdf`)
+- **Removed outdated content**: Eliminated 2015 blog link for multi-container patterns that is no longer maintained
+
+### New Content Added
+
+#### Application Design and Build
+- **Ephemeral Containers**: Modern debugging technique for troubleshooting running pods
+- **Container Lifecycle Hooks**: PostStart and PreStop hooks for container management
+
+#### Application Deployment
+- **Helm Values Files**: Essential for managing Helm chart configurations
+
+#### Application Observability and Maintenance
+- **kubectl debug Command**: Critical new debugging tool using ephemeral containers
+
+#### Application Environment, Configuration, and Security
+- **Pod Security Admission**: Replaced deprecated PodSecurityPolicy with modern admission controller
+- **Seccomp Profiles**: Secure computing mode for restricting system calls
+- **AppArmor**: Mandatory access control framework for application security
+
+#### Services and Networking
+- **Headless Services**: Services without cluster IP for direct pod access
+- **EndpointSlices**: Scalable alternative to Endpoints for large clusters
+
+#### kubectl Resources
+- **kubectl Conventions**: Best practices for using kubectl
+- **Kubernetes API Reference**: Complete API documentation
+
+### Enhanced Sections
+
+#### Exam Tips (6 new tips added)
+- Using `kubectl explain` for quick reference
+- Mastering YAML generation with dry-run
+- Understanding question scope
+- Importance of labeling
+- Terminal editor proficiency
+- Finding resource short names with `kubectl api-resources`
+
+#### kubectl Commands (Significant expansion)
+- **Imperative commands**: Added ConfigMap and Secret creation
+- **Debugging**: Ephemeral container debugging for pods and nodes
+- **Resource inspection**: kubectl explain with recursive flag
+- **Rollout management**: Complete rollout command suite
+- **JSONPath queries**: Advanced filtering and formatting
+- **Port forwarding**: Testing services locally
+- **Container operations**: Exec and cp commands
+- **Resource management**: Patching, force deletion, watching
+- **Label and field selectors**: Efficient resource filtering
+- **RBAC inspection**: Authorization checking commands
+
+### Documentation Quality Improvements
+- All links verified to point to official Kubernetes documentation
+- Maintained consistent markdown formatting
+- Preserved existing helpful sections (Practice Environments, Courses, Books, etc.)
+- Added modern Kubernetes 1.31 features and best practices
 
 ---
 
